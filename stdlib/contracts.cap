@@ -1,0 +1,84 @@
+#lang shill/cap
+
+provide {read-only-dir/c : contract?}
+	{read-only-file/c : contract?}
+	{read-only/c : contract?}
+        {read-exec-only/c : contract?}
+        {create-with-full-privileges/c : contract?}
+        {readable/c : contract?}
+        {writeable/c : contract?}
+        {maybe/c : {contract : contract?} -> contract?}
+        {arg/c : contract?}
+        {timeout/c : contract?}
+        {executable/c : contract?}
+        {pathable/c : contract?}
+        {wallet-policy/c : contract?}
+        {wallet-keys->policy/c : {spec : listof(list/c(string?,contract?))}
+                               +optional
+                               {rest : wallet-policy/c}
+                               -> {{key : string?} -> contract?}}
+        {wallet-keys/c : +optional
+                         {puts : listof(list/c(string?,contract?)),
+                          gets : listof(list/c(string?,contract?)),
+                          put-others : wallet-policy/c,
+                          get-others : wallet-policy/c}
+                         -> contract?}
+        {simple-wallet/c : +optional
+                           {put : maybe/c(contract?),
+                            get : maybe/c(contract?)}
+                         -> contract?};
+
+val read-only-dir/c = dir/c(+lookup,+stat,+read,+path,+read-symlink,+contents);
+val read-only-file/c = file/c(+stat,+read,+path);
+val read-only/c = or/c(read-only-dir/c,read-only-file/c);
+
+val read-exec-only/c = or/c(file/c(+stat,+read,+path,+exec),
+                           dir/c(+lookup,+stat,+read,+path,+exec,+read-symlink,+contents));
+
+val create-with-full-privileges/c =
+    dir/c(+unlink-dir, +unlink-file,
+          +create-dir with { +path, +contents, +lookup, +create-dir, +create-file,
+                             +add-link, +add-symlink, +read-symlink, +unlink-file,
+                             +unlink, +link, +read, +write, +append, +exec,
+                             +stat, +chdir, +chflags, +chmod, +chown, +chtimes, +unlink },
+          +create-file with { +path, +read-symlink, +link, +read, +write, +append,
+                              +exec, +stat, +chflags, +chmod, +chown, +chtimes, +unlink });
+
+val readable/c = file/c(+stat,+read);
+val writeable/c = file/c(+write,+append,+stat);
+val pathable/c = or/c(file/c(+path),dir/c(+path));
+
+val arg/c = or/c(file?,dir?,string?);
+
+val maybe/c = fun (contract) or/c(contract,false);
+
+val timeout/c = or/c(false,and/c(fixnum?,positive?));
+
+val executable/c = {args : listof(arg/c)}
+                  +optional
+                  {stdin  : maybe/c(readable/c),
+                   stdout : maybe/c(writeable/c),
+                   stderr : maybe/c(writeable/c),
+                   extra  : listof(cap?),
+                   timeout : timeout/c}
+                  -> integer?;
+
+val wallet-policy/c = maybe/c({key : string?} -> contract?);
+
+val wallet-keys->policy/c = fun (specs, rest = false) {
+  restfun = if rest then rest else fun (k) none/c;
+  fun (key) {
+    val entry = findf(fun (entry) first(entry) == key, specs);
+    if entry then second(entry) else restfun(key)
+  }
+};
+
+val wallet-keys/c = fun (puts = [], gets = [], put-others = false, get-others = false) {
+  wallet/c(put = wallet-keys->policy/c(puts, rest = put-others),
+           get = wallet-keys->policy/c(gets, rest = get-others))
+};
+
+val simple-wallet/c = fun (get = false, put = false) {
+  wallet-keys/c(put-others = if put then fun (k) put else false,
+                get-others = if get then fun (k) get else false)
+};

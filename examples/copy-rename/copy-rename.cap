@@ -1,0 +1,52 @@
+#lang shill/cap
+
+provide {copy-rename : { recur : boolean?,
+                         filter : {old : string?} -> boolean?, 
+                         rename : {old : string?} -> string?,
+                         from <- filter : dir/c(+contents only filter,+lookup,+read),
+                         to : dir/c(+create-file with { +write }, +create-dir, +lookup) }
+                        -> any };
+
+provide {all : { n : string?} -> boolean?}
+        {txt : { n : string?} -> boolean?}
+        {txt2html : { n : string?} -> string?};
+
+require shill/filesys;
+
+# Copies files and directories between the 'from' and 'to' directories.
+# If recur is true, the copy is recursive, and copies the entire tree rooted
+# at 'from' into the 'to' directory.
+#
+# Only files and directories for which 'filter' returns true will be copied.
+# The 'rename' function is applied to each file name to determine a new
+# name for the destination file.
+val copy-rename = fun(recur,filter,rename,from,to) {
+  val files = contents(from);
+  for f in files do {
+    val old = lookup(from,f);
+    if file?(old) then {
+      val new-name = rename(f);
+      val new-file = create-file(to,new-name);
+      write(new-file,read(old));
+    } else if dir?(old) /\ recur then {
+      existing = lookup(to,f);
+      dir = if sys-error?(existing) then create-dir(to,f) else existing;
+      copy-rename(recur,filter,rename,old,dir);
+    };
+  };
+};
+
+# A filter that succeeds for all files
+val all = fun(str) true;
+
+# A filter that matches files ending in '.txt'
+val txt = fun(str) has-ext?(str,"txt");
+
+# A rename function that replaces names ending
+# in '.txt' with '.html'
+val txt2html = fun(name) {
+    if has-ext?(name,"txt") then
+       replace-ext(name,"html")
+    else
+       name;
+};

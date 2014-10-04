@@ -1,0 +1,7 @@
+#lang shill/ambient
+
+require "copy-rename.cap";
+
+val from = open-dir("source");
+val to = open-dir("target");
+copy-rename(true,all,txt2html,from,to);

@@ -1,0 +1,37 @@
+#lang shill/cap
+
+provide { find : forall [X:+path,+lookup,+contents] . 
+           { node: X, filter: {node: X} -> boolean? , cmd: {ndode: X} -> any}
+	   -> any };
+
+# Example filters and commands
+provide { ends-with : { ext : string? }
+	              -> { { n : pathable/c } -> boolean? } }
+	{ cat : { out : writeable/c }
+	  	    -> { cat : { f : file/c(+read) } -> any } };
+
+require shill/contracts shill/filesys;
+
+# Find files matching filter and invoke cmd
+val find = fun(f, filter, cmd) {
+  if file?(f) /\ filter(f) then
+     cmd(f);
+  
+  # if f is a directory, recurse on its contents
+  if dir?(f) then
+    for g in contents(f) do {
+      val fc = lookup(f,g);
+      if not(sys-error?(fc)) then
+        find(fc, filter, cmd);
+    };
+};
+
+# An example filter
+val ends-with = fun(ext) {
+  fun (n) has-ext?(n,ext);
+};
+
+# An example command
+val cat = fun(out) { 
+  fun (f) write(out,read(f));
+};

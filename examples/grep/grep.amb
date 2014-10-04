@@ -1,0 +1,17 @@
+#lang shill/ambient
+
+require shill/native;
+
+require "grep.cap";
+
+# Create a wallet with the necessary capabilities
+# for running the 'grep' executable.
+wallet = create-wallet();
+populate-native-wallet(wallet,
+	open-dir("/"),
+	"/usr/bin",
+	"/libexec:/lib:/usr/lib",
+	pipe-factory);
+
+# Equivalent to 'grep -R require ../'
+grep(wallet,["-R","require",open-dir("../")],stdout = stdout);

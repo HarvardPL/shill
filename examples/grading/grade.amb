@@ -1,0 +1,22 @@
+#lang shill/ambient
+
+require shill/native;
+
+require "grade.cap";
+
+submissions = open-dir("submissions");
+reference = open-dir("reference");
+working = open-dir("working");
+grades = open-dir("grades");
+tests = open-dir("tests");
+tmp = open-dir("/tmp");
+
+wallet = create-wallet();
+put(wallet,"extras",create-wallet());
+populate-native-wallet(wallet,open-dir("/"),
+        "/sbin:/bin:/usr/sbin:/usr/bin:/usr/local/sbin:/usr/local/bin:/usr/libexec",
+        "/libexec:/lib:/usr/lib:/usr/local/lib:/usr/local/lib/ocaml",
+        pipe-factory, lookups = [open-dir("/home"), open-dir("/dev")],
+	extras = [["/usr/local/bin/ocamlrun",["/usr/local/lib/ocaml"]]]);
+
+grade(submissions,reference,working,grades,tests,stdout,wallet,tmp);

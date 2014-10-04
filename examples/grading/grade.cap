@@ -1,0 +1,101 @@
+#lang shill/cap
+
+provide {grade : {submissions : read-only-dir/c,
+                  reference : read-only-dir/c,
+                  working : create-with-full-privileges/c,
+                  grades : dir/c(+create-file with { +append, +stat }),
+                  tests : dir/c(+contents,+lookup,+read,+stat,+path),
+                  out : file/c(+append),
+                  wallet : native-wallet/c,
+                  tmp : create-with-full-privileges/c}
+               -> void};
+                  
+
+require shill/contracts;
+require shill/io;
+require shill/filesys;
+require shill/native;
+
+require "../copy-rename/copy-rename.cap";
+
+val submission? = fun (n) regexp-match?(".*((check)|(poly))\\.ml", n);
+
+val grade = fun(submissions,reference,working,grades,tests,out,wallet,tmp) {
+    # package up some executables
+    diff = pkg-native("diff",wallet);
+    tail = pkg-native("tail",wallet);
+    ocamlrun = pkg-native("ocamlrun",wallet);
+
+    for f in filter(fun (n) regexp-match?("(.*)-check\\.ml", n),
+                    contents(submissions)) do {
+        student = second(regexp-match("(.*)-check\\.ml", f));
+
+        # Create a working directory and copy in files
+        workdir = create-dir(working, student);
+        copy-rename(false, fun (n) not(submission?(n)), fun (n) n,
+                    reference, workdir);
+        sub-regex = "^" ++ student ++ "-(.*)";
+        copy-rename(false, fun (n) regexp-match?(sub-regex, n),
+                           fun (n) second(regexp-match(sub-regex, n)),
+                           submissions, workdir);
+
+        log = create-file(grades,student ++ ".txt");
+
+        fwrite(out,"Compiling submission for ~a~n",student);
+        fwrite(log,"Compiling submission for ~a~n",student);
+
+        chdir(workdir);
+        buildlog = create-file(workdir, "build.log");
+        ret = exec-wallet("gmake", wallet, [], stdout = buildlog, stderr = buildlog,
+                          extra = [working,workdir,tmp]);
+        append(log,read(buildlog));
+        if ret == 0 then {
+           fwrite(out,"Running tests...~n");
+           fwrite(log,"Running tests...~n");
+
+           executable = lookup(workdir,"lam","exec");
+
+           vals success, failure = for test in filter(fun (n) has-ext?(n,"lam"), contents(tests))
+           init success := 0, failure := 0 do {
+             fwrite(log,"~a~n",test);
+             tmp = create-file(workdir,replace-ext(test,"tmp"));
+             args = if regexp-match?("poly-(.*)",test)
+                    then [executable,"-letpoly",lookup(tests,test)]
+                    else [executable,lookup(tests,test)];
+             ocamlrun(args, stdout = tmp, stderr = tmp, timeout = 1);
+             tmptail = create-file(workdir,replace-ext(test,"tmptail"));
+             tail(["-n","1",tmp], stdout = tmptail);
+
+             expected = lookup(tests,replace-ext(test,"out"));
+             outtail = create-file(workdir,replace-ext(test,"outtail"));
+             tail(["-n","1",expected], stdout = outtail);
+
+             null = create-file(workdir,replace-ext(test,"taildiff"));
+             ret = diff([tmptail,outtail], stdout = null, stderr = null);
+             vals sinc, finc =
+                  if not(ret == 0)
+                  then {
+                     fwrite(log,"result mismatch~n");
+                     fwrite(out,"Result mismatch on test ~a~n",test);
+                     fwrite(log,"Result:~n~a~nDiff:~n",read(tmp));
+		     diffout = create-file(workdir,replace-ext(test,"diffout"));
+                     diff([tmp,expected], stdout = diffout, stderr = diffout);
+		     append(log,read(diffout));
+                     fwrite(log,"~n");
+                     values(0,1);
+                  } else {
+                     fwrite(log,"ok~n");
+                     values(1,0);
+                  };
+           } update success := success + sinc, failure := failure + finc;
+           fwrite(out,"Finished tests: ~a successes, ~a failures~n",success,failure);
+           fwrite(log,"Finished tests: ~a successes, ~a failures~n",success,failure);
+        } else {
+           fwrite(out,"Compilation failed...~n");
+           fwrite(log,"Compilation failed...~n")
+        };
+
+        # Clean up
+        unlink-dir(working, workdir, student)
+    };
+};

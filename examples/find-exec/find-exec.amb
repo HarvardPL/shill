@@ -1,0 +1,7 @@
+#lang shill/ambient
+
+require "find-exec.cap";
+
+val examples = open-dir(".");
+
+find(examples,ends-with("cap"),cat(stdout));

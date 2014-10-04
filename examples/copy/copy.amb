@@ -1,0 +1,7 @@
+#lang shill/ambient
+
+require "copy.cap";
+
+val dir = open-dir("source");
+val tmp = open-dir("target");
+copy(true,dir,tmp);

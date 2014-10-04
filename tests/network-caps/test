@@ -1,0 +1,14 @@
+PASSED=0
+
+for file in *.c
+do
+    echo "Running $file"
+    cc $file && ./a.out
+    if [ $? -eq 0 ]; then
+        PASSED=`expr $PASSED + 1`
+    fi
+    sleep .5
+done
+
+echo ""
+echo "Meta-testing results: $PASSED test suites passed."

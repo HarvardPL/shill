@@ -1,0 +1,24 @@
+#lang shill/cap
+
+provide {copy : { recur : boolean?,
+                  from : dir/c( +contents,+lookup,+read),
+                  to : dir/c(+create-file with { +write }, +create-dir, +lookup) }
+                 -> any};
+
+# Copies files and directories between the 'from' and 'to' directories.
+# If recur is true, the copy is recursive, and copies the entire tree rooted
+# at 'from' into the 'to' directory.
+val copy = fun(recur,from,to) {
+  val files = contents(from);
+  for f in files do {
+    val source = lookup(from,f);
+    if file?(source) then {
+      val target = create-file(to,f);
+      write(target,read(source));
+    } else if dir?(source) /\ recur then {
+      existing = lookup(to,f);
+      dir = if sys-error?(existing) then create-dir(to,f) else existing;
+      copy(recur,source,dir);
+    };
+  };
+};

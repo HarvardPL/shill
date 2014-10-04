@@ -1,0 +1,172 @@
+#lang shill/cap
+
+provide
+  {pkg-native :
+     {name : string?, wallet : native-wallet/c}
+     +rest
+     {others : listof(string?)}
+     -> maybe/c(executable/c)}
+  {exec-wallet :
+     {exec : or/c(string?,file/c(+exec, +path, +read)),
+      wallet : native-wallet/c,
+      args : listof(arg/c)}
+     +optional
+     {stdin  : maybe/c(readable/c),
+      stdout : maybe/c(writeable/c),
+      stderr : maybe/c(writeable/c),
+      extra  : listof(cap?),
+      timeout : or/c(false,and/c(fixnum?,positive?))}
+     -> integer?}
+  {native-wallet/c : contract?}
+  {native-wallet-ext/c :
+     +optional {get : wallet-policy/c, put : wallet-policy/c} -> contract?}
+  {find-in-path :
+     {path : listof(dir/c(+lookup with { +path, +read, +exec })),
+      name : string?,
+      exec : boolean?}
+     -> or/c(file/c(+path, +read, +exec),false)}
+  {populate-native-wallet :
+     forall [X : +lookup] .
+       {wallet : wallet-keys/c(gets = [["extras", simple-wallet/c(put = X)]],
+                               puts = [["path", X],["lib-path", X],["lookups", X],
+                                       ["ldd-tools", X],
+                                       ["pipe-factory", pipe-factory?]]),
+       root : X,
+       path : path-spec?, 
+       libpath : path-spec?, 
+       pf : pipe-factory?}
+       +optional {extras : listof(list/c(path-string?,listof(path-string?))),
+                  lookups : listof(X)}
+       -> void};
+
+require shill/contracts;
+require shill/filesys;
+
+val native-wallet-get-spec =
+    [["path", dir/c(+lookup with { +path, +read, +exec, +read-symlink})],
+     ["lib-path", dir/c(+lookup with { +path, +read, +exec, +read-symlink})],
+     ["ldd-tools", file/c(+path, +read, +stat, +exec)],
+     ["lookups", dir/c(+lookup, +stat)],
+     ["extras", simple-wallet/c(get = read-exec-only/c)],
+     ["pipe-factory", pipe-factory/c(+first with { +write, +append, +close },
+                                     +second with { +read, +stat, +close })]];
+
+val native-wallet/c = wallet-keys/c(gets = native-wallet-get-spec);
+
+val native-wallet-ext/c = fun (get = false, put = false) {
+  wallet-keys/c(gets = native-wallet-get-spec,
+                get-others = get,
+                put-others = put)
+};
+
+val populate-native-wallet = fun(wallet,root,pathspec,libpathspec,pf,extras = [],lookups = []) {
+  val paths = path-spec->paths(pathspec);
+  for p in paths do { put(wallet,"path",lookup-path(root,p)) };
+  val libpaths = path-spec->paths(libpathspec);
+  for p in libpaths do { put(wallet,"lib-path",lookup-path(root,p)) };
+
+  put(wallet,"lookups",root);
+  for l in lookups do { put(wallet,"lookups",l) };
+
+  put(wallet,"ldd-tools",lookup-path(root,"/etc/libmap.conf"));
+  put(wallet,"ldd-tools",lookup-path(root,"/var/run/ld-elf.so.hints"));
+
+  val extras-wallets = get(wallet,"extras");
+  if not(empty?(extras-wallets)) then {
+    val extras-wallet = first(extras-wallets);
+    for extra in extras do {
+      for entry in second(extra) do {
+        put(extras-wallet,first(extra),lookup-path(root,entry))
+      }
+    }
+  };
+  put(wallet,"pipe-factory",pf);
+};
+
+val find-in-path = fun(path-list,name,exec) {
+  if empty?(path-list) then error("Could not find " ++ name)
+  else {
+    val cur = first(path-list);
+    val f = if exec then lookup(cur,name,"exec") else lookup(cur,name);
+    if file?(f) then f
+    else
+      find-in-path(rest(path-list),name,exec)
+  }
+};
+
+val pkg-ldd = fun(path,lib-path,lookup-roots,pf,ldd-tools) {
+  val ldd = find-in-path(path,"ldd",true);
+  val libexec = find-in-path(lib-path,"ld-elf.so.1",false);
+  fun (exe) {
+    val pipe = create-pipe(pf);
+    val ret = exec(ldd, ["ldd","-a","-f","%o\\n",exe],
+                   stdout = first(pipe), extra = lookup-roots ++ lib-path ++ ldd-tools);
+    close(first(pipe));
+    data = bytes->string/utf-8(read(second(pipe)));
+    lines = string-split(data);
+    val libs = filter(fun (n) not(regexp-match?(".*:$",n)), lines);
+    libs
+  }
+};
+
+val get-libs = fun(ldd,lib-path,f) {
+  val lib-names = ldd(f);
+  val libs = map(fun (name) find-in-path(lib-path,name,false), lib-names);
+  libs
+};
+
+val get-caps = fun (paths,lookups,ldd,lib-path,libexec,extras,name) {
+  val exe = find-in-path(paths,name,true);
+  val need = get-libs(ldd,lib-path,exe);
+  val libs = [libexec|need];
+
+  walletcaps = 
+  for lib in libs init walletcaps := if extras then get(extras,path(exe)) else [] do {
+    newextras = if extras then get(extras,path(lib)) else [];
+  } update
+    walletcaps := newextras ++ walletcaps;
+  val saved = lookups ++ walletcaps ++ libs;
+  values(exe,saved);
+};
+
+val pkg-native = fun(name,wallet,others ...) {
+  val paths = get(wallet,"path");
+  val lib-path = get(wallet,"lib-path");
+  val lookups = get(wallet,"lookups");
+  val lddstuff = get(wallet,"ldd-tools");
+  val all-extras = get(wallet,"extras");
+  val extras = if empty?(all-extras) then false else first(all-extras);
+  val pf = first(get(wallet,"pipe-factory"));
+
+  val ldd = pkg-ldd(paths,lib-path,lookups,pf,lddstuff);
+  val libexec = find-in-path(lib-path,"ld-elf.so.1",false);
+
+  vals exe, saved = get-caps(paths,lookups,ldd,lib-path,libexec,extras,name);
+
+  val othercaps = flatten(map(fun (name) {
+    vals nexe, nsaved = get-caps(paths,lookups,ldd,lib-path,libexec,extras,name);
+    [nexe|nsaved]
+  },others));
+
+  fun (args, stdin = false, stdout = false, stderr = false, extra = empty, timeout = false) {
+    exec(exe, [name|args], extra = extra ++ saved ++ othercaps ++ lddstuff,
+         stdin = stdin, stdout = stdout, stderr = stderr, timeout = timeout)
+  }
+};
+
+val exec-wallet = fun (executable,wallet,args,extra = [],timeout = false,
+                       stdin = false,stdout = false,stderr = false) {
+  val paths = get(wallet,"path");
+  val lib-path = get(wallet,"lib-path");
+  val lddstuff = get(wallet,"ldd-tools");
+  val lookups = get(wallet,"lookups");
+  val pf = get(wallet,"pipe-factory");
+
+  val exe = if file?(executable) then executable else find-in-path(paths,executable,true);
+
+  val from-wallet = paths ++ lib-path ++ lookups ++ pf ++ lddstuff;
+  val extras = extra ++ from-wallet;
+
+  exec(exe, [path(exe)|args], extra = extras,
+       stdin = stdin, stdout = stdout, stderr = stderr, timeout = timeout)
+};

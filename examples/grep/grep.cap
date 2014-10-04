@@ -1,0 +1,27 @@
+#lang shill/cap
+
+provide { grep : { wallet : native-wallet/c,
+	       	   args   : listof(arg/c) }
+		   +optional
+		 { stdin  : maybe/c(readable/c),
+		   stdout : maybe/c(writeable/c),
+		   stderr : maybe/c(writeable/c),
+		   timeout : timeout/c}
+		   -> integer? };
+
+require shill/contracts shill/native;
+
+# grep takes as input a wallet containing capabilities for
+# running the grep executable, a list of arguments to pass
+# to grep, and optional arguments for specifying input and
+# output streams as well as a timeout.
+grep = fun (wallet, args,
+       	    stdin = false, stdout = false, stderr = false,
+	    timeout = false) {
+  # pkg-native uses the capabilities in wallet to create
+  # a closure that will execute the requested executable
+  # in a capability-based sandbox
+  executable = pkg-native("grep",wallet);
+  executable(args,timeout = timeout,
+             stdin = stdin, stdout = stdout, stderr = stderr);
+}

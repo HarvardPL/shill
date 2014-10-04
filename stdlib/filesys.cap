@@ -1,0 +1,64 @@
+#lang shill/cap
+
+require shill/contracts;
+
+provide {path-spec? : {spec : string?} -> boolean?}
+        {path-spec->paths : {spec : path-spec?} -> listof(path-string?)}
+        {lookup-path : forall [X : +lookup] .
+                              {root : X, path : path-string?} -> X}
+        {truncate : {f : file/c(+write)} -> void}
+        {has-ext? : {path : or/c(path-string?,pathable/c)}
+                    +rest {exts : non-empty-listof(path-element-string?)}
+                    -> boolean?}
+        {replace-ext : {path : path-string?,
+                        ext : path-element-string?}
+                       +optional
+                       {from : path-element-string?}
+                       -> maybe/c(path-string?)}
+        {build-path : {path : or/c(path-string?,pathable/c), name : path-element-string?} -> path-string?}
+        {name : {node : or/c(file/c(+path),dir/c(+path))} -> path-element-string?};
+
+val path-element-string? = fun (str) {
+    path-element?(string->path(str));
+};
+
+val path-spec? = fun(spec) {
+  andmap(path-string?,regexp-split(":(?<!\\\\)",spec));
+};
+
+val path-spec->paths = fun (spec) {
+  regexp-split(":(?<!\\\\)",spec)
+};
+
+val build-path = fun (pathable, name) {
+  val p = if string?(pathable) then pathable else path(pathable);
+  p ++ "/" ++ name
+};
+
+val lookup-path = fun (root,path-spec) {
+  val elements = explode-path(path-spec);
+  val relative = if equal?(path->string(first(elements)),"/") then rest(elements) else elements;
+  foldl(fun (elem,cur) lookup(cur,path->string(elem)), root, relative);
+};
+
+val truncate = fun (f) {
+  write(f,make-bytes(0));
+};
+
+val has-ext? = fun(pathable,exts ...) {
+  val p = if string?(pathable) then pathable else path(pathable);
+  val ext-regex = fun (ext) "(.*\\." ++ regexp-quote(ext) ++ "$)";
+  ormap(fun (ext) regexp-match?(ext-regex(ext),p), exts);
+};
+
+val replace-ext = fun (p,ext,from = false) {
+  val regex = if from
+              then "(.*)\\." ++ regexp-quote(from) ++"$"
+              else "(.*)\\.[^.]*";
+  val match = regexp-match(regex,p);
+  if match then second(match) ++ "." ++ ext else false
+};
+
+val name = fun(f) {
+  path->string(file-name-from-path(string->path(path(f))));
+};

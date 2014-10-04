@@ -1,0 +1,12 @@
+#lang shill/cap
+
+require shill/contracts;
+
+provide {fwrite : {out : writeable/c, format : string?}
+                  +rest {rest : listof(any/c)}
+                  -> void};
+
+val fwrite = fun (out,form,vs ...) {
+    val str = apply(format,[form|vs]);
+    append(out,string->bytes/utf-8(str))
+};
