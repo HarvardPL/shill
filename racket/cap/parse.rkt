@@ -292,7 +292,7 @@
   (lexer-src-pos
    [(eof) 'EOF]
    [comment (return-without-pos (expression-lexer input-port))]
-   [(:or #\tab #\space #\newline)    ; this skips whitespace
+   [whitespace    ; this skips whitespace
     (return-without-pos (expression-lexer input-port))] 
    [#\newline 'NEWLINE]
    
