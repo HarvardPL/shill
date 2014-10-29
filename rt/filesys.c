@@ -400,12 +400,13 @@ int shill_contents(int fd, void (*record_entry)(const char *)) {
   struct dirent *entry;
   while ((entry = readdir(dir)) != NULL) {
     record_entry(entry->d_name);
+    errno = 0;
   }
 
   int last_errno = errno;
   closedir(dir);
   errno = last_errno;
-  return (errno == 0) ? 0 : -1;
+  return (errno != 0) ? -1 : 0;
 }
 
 int shill_pipe(int filedes[2]) {
