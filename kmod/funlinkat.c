@@ -30,7 +30,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
-*/
+ */
 
 #include <sys/capability.h>
 #include <sys/param.h>
@@ -60,12 +60,12 @@ kern_frmdirat(struct thread *td, int fd, char *path, int target, enum uio_seg pa
 	struct vnode *vp, *tvp;
 	int error;
 	struct nameidata nd;
-	int vfslocked;
+	cap_rights_t rights;
 
 	fdp = td->td_proc->p_fd;
         FILEDESC_SLOCK(fdp);
         if (((unsigned)target >= fdp->fd_nfiles)
-            || ((fp = fdp->fd_ofiles[target]) == NULL)) {
+            || ((fp = fdp->fd_ofiles[target].fde_file) == NULL)) {
           FILEDESC_SUNLOCK(fdp);
           return EBADF;
         } else {
@@ -76,13 +76,12 @@ kern_frmdirat(struct thread *td, int fd, char *path, int target, enum uio_seg pa
 
 restart:
 	bwillwrite();
-	NDINIT_ATRIGHTS(&nd, DELETE, LOCKPARENT | LOCKLEAF | MPSAFE |
-	    AUDITVNODE1, pathseg, path, fd, CAP_RMDIR, td);
+	NDINIT_ATRIGHTS(&nd, DELETE, LOCKPARENT | LOCKLEAF | AUDITVNODE1,
+		pathseg, path, fd, cap_rights_init(&rights, CAP_UNLINKAT), td);
 	if ((error = namei(&nd)) != 0) {
 		vrele(tvp);
 		return (error);
         }
-	vfslocked = NDHASGIANT(&nd);
 	vp = nd.ni_vp;
 	if (vp->v_type != VDIR) {
 		error = ENOTDIR;
@@ -114,7 +113,7 @@ restart:
 #ifdef MAC
 	error = mac_vnode_check_unlink(td->td_ucred, nd.ni_dvp, vp,
 	    &nd.ni_cnd);
-	if (error)
+	if (error != 0)
 		goto out;
 #endif
 	if (vn_start_write(nd.ni_dvp, &mp, V_NOWAIT) != 0) {
@@ -124,7 +123,6 @@ restart:
 			vrele(nd.ni_dvp);
 		else
 			vput(nd.ni_dvp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		if ((error = vn_start_write(NULL, &mp, V_XSLEEP | PCATCH)) != 0) {
 			vrele(tvp);
 			return (error);
@@ -141,7 +139,6 @@ out:
 		vrele(nd.ni_dvp);
 	else
 		vput(nd.ni_dvp);
-	VFS_UNLOCK_GIANT(vfslocked);
         vrele(tvp);
 	return (error);
 }
@@ -157,12 +154,12 @@ kern_funlinkat(struct thread *td, int fd, char *path, int target, enum uio_seg p
 	int error;
 	struct nameidata nd;
 	struct stat sb;
-	int vfslocked;
+	cap_rights_t rights;
 
         fdp = td->td_proc->p_fd;
         FILEDESC_SLOCK(fdp);
         if (((unsigned)target >= fdp->fd_nfiles)
-            || ((fp = fdp->fd_ofiles[target]) == NULL)) {
+            || ((fp = fdp->fd_ofiles[target].fde_file) == NULL)) {
           FILEDESC_SUNLOCK(fdp);
           return EBADF;
         } else {
@@ -174,13 +171,12 @@ kern_funlinkat(struct thread *td, int fd, char *path, int target, enum uio_seg p
 
 restart:
 	bwillwrite();
-	NDINIT_AT(&nd, DELETE, LOCKPARENT | LOCKLEAF | MPSAFE | AUDITVNODE1,
-	    pathseg, path, fd, td);
+	NDINIT_ATRIGHTS(&nd, DELETE, LOCKPARENT | LOCKLEAF | AUDITVNODE1,
+		pathseg, path, fd, cap_rights_init(&rights, CAP_UNLINKAT), td);
 	if ((error = namei(&nd)) != 0) {
 		vrele(tvp);
 		return (error == EINVAL ? EPERM : error);
         }
-	vfslocked = NDHASGIANT(&nd);
 	vp = nd.ni_vp;
         if (tvp != vp) {
 		error = EINVAL;	/* File to unlink does not match name */
@@ -207,7 +203,6 @@ restart:
 				vrele(vp);
 			else
 				vput(vp);
-			VFS_UNLOCK_GIANT(vfslocked);
 			if ((error = vn_start_write(NULL, &mp,
 			    V_XSLEEP | PCATCH)) != 0) {
 				vrele(tvp);
@@ -234,7 +229,6 @@ out:
 		vrele(vp);
 	else
 		vput(vp);
-	VFS_UNLOCK_GIANT(vfslocked);
         vrele(tvp);
 	return (error);
 }

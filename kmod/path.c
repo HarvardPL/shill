@@ -40,14 +40,13 @@ shill_path(struct thread *td, void *args) {
     FILEDESC_SUNLOCK(fdp);
     return EBADF;
   }
-  if (((fp = fdp->fd_ofiles[pargs->fd]) != NULL) && (fp->f_type == DTYPE_VNODE)) {
+  if (((fp = fdp->fd_ofiles[pargs->fd].fde_file) != NULL)
+      && (fp->f_type == DTYPE_VNODE)) {
     struct vnode *vp = fp->f_vnode;
     vref(vp);
 
-    int vfslocked = VFS_LOCK_GIANT(vp->v_mount);
     error = vn_fullpath_global(td, vp, &rpath, &fbuf);
     if (error != 0) {
-      VFS_UNLOCK_GIANT(vfslocked);
       vrele(vp);
       FILEDESC_SUNLOCK(fdp);
       return (error);
@@ -55,7 +54,6 @@ shill_path(struct thread *td, void *args) {
 
     int len = strlen(rpath);
     if (len >= pargs->len) {
-      VFS_UNLOCK_GIANT(vfslocked);
       vrele(vp);
       free(fbuf, M_TEMP);
       FILEDESC_SUNLOCK(fdp);
@@ -63,7 +61,6 @@ shill_path(struct thread *td, void *args) {
     }
 
     error = copyout(rpath,pargs->buf,len);
-    VFS_UNLOCK_GIANT(vfslocked);
     vrele(vp);
     free(fbuf, M_TEMP);
   } else {

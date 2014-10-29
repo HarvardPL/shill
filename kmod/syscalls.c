@@ -35,18 +35,14 @@
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/buf.h>
-#include <sys/capability.h>
-#include <sys/uio.h>
-#include <sys/lock.h>
-#include <sys/mutex.h>
+#include <sys/capsicum.h>
 #include <sys/mount.h>
+#include <sys/mutex.h>
 #include <sys/namei.h>
-#include <sys/vnode.h>
-#include <sys/errno.h>
-#include <sys/fcntl.h>
 #include <sys/filedesc.h>
+#include <sys/fcntl.h>
 #include <sys/stat.h>
-#include <sys/ucred.h>
+#include <sys/vnode.h>
 #include <sys/proc.h>
 
 #include <security/audit/audit.h>
@@ -55,8 +51,8 @@
 
 static
 int kern_mkopendirat(struct thread *td, int fd,
-					 const char *path, enum uio_seg segflg,
-					 int mode, int flags) {
+		     const char *path, enum uio_seg segflg,
+		     int mode, int flags) {
 	struct proc *p = td->td_proc;
 	struct filedesc *fdp = p->p_fd;
 	struct mount *mp;
@@ -64,16 +60,16 @@ int kern_mkopendirat(struct thread *td, int fd,
 	struct vattr vattr;
 	int error;
 	struct nameidata nd;
-	int vfslocked;
 	struct file *fp, *nfp;
 	int indx = -1;
+	cap_rights_t rights;
 
 	AUDIT_ARG_FFLAGS(flags);
 	AUDIT_ARG_MODE(mode);
 	if (flags & ~O_CLOEXEC) {
 	  return (EINVAL);
 	} else {
-      flags = flags | O_RDONLY;
+	  flags = flags | O_RDONLY;
 	  flags = flags | O_DIRECTORY;
 	  flags = FFLAGS(flags);
 	}
@@ -82,6 +78,7 @@ int kern_mkopendirat(struct thread *td, int fd,
 	error = falloc_noinstall(td, &nfp);
 	if (error)
 	  return (error);
+
 	/* An extra reference on `nfp' has been held for us by falloc_noinstall(). */
 	fp = nfp;
 	/* Set the flags early so the finit in devfs can pick them up. */
@@ -89,8 +86,8 @@ int kern_mkopendirat(struct thread *td, int fd,
 	
 restart:
 	bwillwrite();
-	NDINIT_ATRIGHTS(&nd, CREATE, LOCKPARENT | SAVENAME | MPSAFE |
-	    AUDITVNODE1, segflg, path, fd, CAP_MKDIR, td);
+	NDINIT_ATRIGHTS(&nd, CREATE, LOCKPARENT | SAVENAME | AUDITVNODE1,
+		segflg, path, fd, cap_rights_init(&rights, CAP_MKDIRAT), td);
 	nd.ni_cnd.cn_flags |= WILLBEDIR;
 	if ((error = namei(&nd)) != 0) {
 	  if (indx != -1)
@@ -98,10 +95,10 @@ restart:
 	  fdrop(fp, td);
 	  return (error);
 	}
-	vfslocked = NDHASGIANT(&nd);
 	vp = nd.ni_vp;
 	if (vp != NULL) {
 		NDFREE(&nd, NDF_ONLY_PNBUF);
+
 		/*
 		 * XXX namei called with LOCKPARENT but not LOCKLEAF has
 		 * the strange behaviour of leaving the vnode unlocked
@@ -112,7 +109,6 @@ restart:
 		else
 			vput(nd.ni_dvp);
 		vrele(vp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		if (indx != -1)
 		  fdclose(fdp, fp, indx, td);
 		fdrop(fp, td);
@@ -121,7 +117,6 @@ restart:
 	if (vn_start_write(nd.ni_dvp, &mp, V_NOWAIT) != 0) {
 		NDFREE(&nd, NDF_ONLY_PNBUF);
 		vput(nd.ni_dvp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		if ((error = vn_start_write(NULL, &mp, V_XSLEEP | PCATCH)) != 0) {
 		  if (indx != -1)
 			fdclose(fdp, fp, indx, td);
@@ -163,7 +158,7 @@ restart:
 		  goto out;
 	} else
 #endif
-	  error = finstall(td, fp, &indx, flags);
+	  error = finstall(td, fp, &indx, flags, NULL);
 out:
 	NDFREE(&nd, NDF_ONLY_PNBUF);
 	vput(nd.ni_dvp);
@@ -178,16 +173,15 @@ out:
 	}
 	fdrop(fp, td);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 
 int mkopendirat(struct thread *td, void *usr_arg) {
   struct mkopendirat_args args;
-
+  
   if (0 != copyin(usr_arg, &args, sizeof(struct mkopendirat_args)))
 	return EFAULT;
-  
+
   return (kern_mkopendirat(td, args.fd, args.path, UIO_USERSPACE,
-						   args.mode, args.flags));
+			   args.mode, args.flags));
 }

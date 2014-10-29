@@ -47,6 +47,7 @@
 #include <sys/mount.h>
 #include <sys/vnode.h>
 #include <sys/priv.h>
+#include <sys/capsicum.h>
 
 /*
  * This function is duplicated from sys/kern/vfs_syscalls.c.
@@ -90,8 +91,7 @@ kern_flinkat(struct thread *td, int fd, int dfd, char *path,
 	struct vnode *vp;
 	struct mount *mp;
 	struct nameidata nd;
-	int vfslocked;
-	int lvfslocked;
+	cap_rights_t rights;
 	int error;
 
 	bwillwrite();
@@ -103,24 +103,20 @@ kern_flinkat(struct thread *td, int fd, int dfd, char *path,
 	if (error != 0)
 	  return (error);
 
-	vfslocked = VFS_LOCK_GIANT(vp->v_mount);
 	if (vp->v_type == VDIR) {
 	  vrele(vp);
-	  VFS_UNLOCK_GIANT(vfslocked);
 	  return (EPERM); /* POSIX */
 	}
 
 	// Prepare to start writing (the write is to add the link)
 	if ((error = vn_start_write(vp, &mp, V_WAIT | PCATCH)) != 0) {
 		vrele(vp);
-		VFS_UNLOCK_GIANT(vfslocked);
 		return (error);
 	}
 	// Attempt to create the link
-	NDINIT_AT(&nd, CREATE, LOCKPARENT | SAVENAME | MPSAFE | AUDITVNODE2,
-	    segflg, path, dfd, td);
+	NDINIT_ATRIGHTS(&nd, CREATE, LOCKPARENT | SAVENAME | AUDITVNODE2,
+		segflg, path, dfd, cap_rights_init(&rights, CAP_LINKAT), td);
 	if ((error = namei(&nd)) == 0) {
-		lvfslocked = NDHASGIANT(&nd);
 		// SM: Check if a file already exists at the link site
 		if (nd.ni_vp != NULL) {
 			if (nd.ni_dvp == nd.ni_vp)
@@ -129,10 +125,15 @@ kern_flinkat(struct thread *td, int fd, int dfd, char *path,
 				vput(nd.ni_dvp);
 			vrele(nd.ni_vp);
 			error = EEXIST;
-		} else if ((error = vn_lock(vp, LK_EXCLUSIVE | LK_RETRY))
-		    == 0) {
+		} else if ((error = vn_lock(vp, LK_EXCLUSIVE)) == 0) {
 		  // ^ SM: Lock the vnode we are linking to
-		  error = can_hardlink(vp, td->td_ucred);
+		  /*
+		   * Check for cross-device links
+		   */
+		  if (nd.ni_dvp->v_mount != vp->v_mount)
+		    error = EXDEV;
+		  else
+		    error = can_hardlink(vp, td->td_ucred);
 		  if (error == 0)
 #ifdef MAC
 				error = mac_vnode_check_link(td->td_ucred,
@@ -145,12 +146,10 @@ kern_flinkat(struct thread *td, int fd, int dfd, char *path,
 			vput(nd.ni_dvp);
 		}
 		NDFREE(&nd, NDF_ONLY_PNBUF);
-		VFS_UNLOCK_GIANT(lvfslocked);
 	}
 	// SM: cleanup
 	vrele(vp);
 	vn_finished_write(mp);
-	VFS_UNLOCK_GIANT(vfslocked);
 	return (error);
 }
 

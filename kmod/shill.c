@@ -1468,26 +1468,6 @@ static struct mac_policy_ops ops = {
   .mpo_vnode_init_label = shill_vnode_init_label,
   .mpo_vnode_internalize_label = shill_vnode_internalize_label,
   .mpo_vnode_relabel = shill_vnode_relabel,
-
-  .mpo_pipe_check_ioctl = shill_pipe_check_ioctl,
-  .mpo_pipe_check_poll = shill_pipe_check_poll,
-  .mpo_pipe_check_read = shill_pipe_check_read,
-  .mpo_pipe_check_relabel = shill_pipe_check_relabel,
-  .mpo_pipe_check_stat = shill_pipe_check_stat,
-  .mpo_pipe_check_write = shill_pipe_check_write,
-  .mpo_pipe_create = shill_pipe_create,
-  .mpo_pipe_destroy_label = shill_pipe_destroy_label,
-  .mpo_pipe_init_label = shill_pipe_init_label,
-  .mpo_pipe_copy_label = shill_pipe_copy_label,
-  .mpo_pipe_internalize_label = shill_pipe_internalize_label,
-  .mpo_pipe_relabel = shill_pipe_relabel,
-
-  .mpo_proc_check_debug = shill_proc_check_debug,
-  .mpo_proc_check_sched = shill_proc_check_sched,
-  .mpo_proc_check_signal = shill_proc_check_signal,
-  .mpo_proc_check_wait = shill_proc_check_wait,
-  .mpo_proc_destroy_label = shill_proc_destroy_label,
-  .mpo_proc_init_label = shill_proc_init_label,
 };
 
 MAC_POLICY_SET(&ops, shill, "Shill Sandbox Module",

@@ -36,7 +36,7 @@ cat > ${tmp}/policy.txt <<EOF
 { +read, +exec, +stat }
 /lib/libc.so.7
 /lib/libedit.so.7
-/lib/libncurses.so.8
+/lib/libncursesw.so.8
 
 { +write, +append, +stat }
 &stdout

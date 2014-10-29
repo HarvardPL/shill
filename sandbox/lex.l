@@ -2,6 +2,8 @@
 #include <string.h>
 
 #include "yacc.h"
+
+#define YY_NO_INPUT
 %}
 
 %option noyywrap
