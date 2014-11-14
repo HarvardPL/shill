@@ -52,6 +52,11 @@ struct shillstat {
   uint64_t change_nsec;
   uint64_t create_sec;
   uint64_t create_nsec;
+  uint32_t uid;
+  uint32_t gid;
+  uint32_t perms;
+  bool     suid;
+  bool     sgid;
 };
 
 int shill_stat(int fd, struct shillstat *);

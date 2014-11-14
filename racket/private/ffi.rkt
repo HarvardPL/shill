@@ -423,7 +423,8 @@ FFI implementations
            [ret (shill-path (node-fd node) (λ (p) (set! path (string->path p))))])
       path))
 
-  (define-struct stat (size accessed modified changed created))
+  (define-struct stat (size accessed modified changed created
+		       uid gid perms suid sgid))
 
   (define-cstruct _cstat ([size  _uint64]
 			  [asec  _uint64]
@@ -433,14 +434,24 @@ FFI implementations
 			  [csec  _uint64]
 			  [cnsec _uint64]
 			  [bsec  _uint64]
-			  [bnsec _uint64]))
+			  [bnsec _uint64]
+			  [uid   _uint32]
+			  [gid   _uint32]
+			  [perms _uint32]
+			  [suid  _stdbool]
+			  [sgid  _stdbool]))
 
   (define (cstat-to-stat cs)
     (stat (cstat-size cs)
 	  (times-to-nanoseconds (cstat-asec cs) (cstat-ansec cs))
 	  (times-to-nanoseconds (cstat-msec cs) (cstat-mnsec cs))
 	  (times-to-nanoseconds (cstat-csec cs) (cstat-cnsec cs))
-	  (times-to-nanoseconds (cstat-bsec cs) (cstat-bnsec cs))))
+	  (times-to-nanoseconds (cstat-bsec cs) (cstat-bnsec cs))
+	  (cstat-uid cs)
+	  (cstat-gid cs)
+	  (cstat-perms cs)
+	  (cstat-suid cs)
+	  (cstat-sgid cs)))
 
   (define (times-to-nanoseconds sec nano)
     (+ (* 1000000000 sec) nano))
@@ -448,7 +459,7 @@ FFI implementations
   (define (shill-stat node)
     (let* ([stat (bind-shillrt "shill_stat"
 			       (_fun #:save-errno 'posix _int _cstat-pointer ffi:-> _int))]
-	   [cstat-buf (make-cstat 0 0 0 0 0 0 0 0 0)]
+	   [cstat-buf (make-cstat 0 0 0 0 0 0 0 0 0 0 0 0 0 0)]
 	   [ret (stat (node-fd node) cstat-buf)])
     (if (eq? ret -1)
 	(sys-error (saved-error))

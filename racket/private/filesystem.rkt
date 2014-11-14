@@ -45,7 +45,11 @@
 	 created
 	 accessed
 	 modified
-	 status-changed)
+	 status-changed
+	 uid suid
+	 gid sgid
+	 perms
+	 (struct-out stat))
 
 (require (only-in racket/base [append list-append])
          racket/contract
@@ -1119,6 +1123,26 @@
 (define (created node)
   (cond [(shill-dir? node) (stat-created ((shill-dir-stat node)))]
 	[(shill-file? node) (stat-created ((shill-file-stat node)))]))
+
+(define (uid node)
+  (cond [(shill-dir? node) (stat-uid ((shill-dir-stat node)))]
+	[(shill-file? node) (stat-uid ((shill-file-stat node)))]))
+
+(define (gid node)
+  (cond [(shill-dir? node) (stat-gid ((shill-dir-stat node)))]
+	[(shill-file? node) (stat-gid ((shill-file-stat node)))]))
+
+(define (suid node)
+  (cond [(shill-dir? node) (stat-suid ((shill-dir-stat node)))]
+	[(shill-file? node) (stat-suid ((shill-file-stat node)))]))
+
+(define (sgid node)
+  (cond [(shill-dir? node) (stat-sgid ((shill-dir-stat node)))]
+	[(shill-file? node) (stat-sgid ((shill-file-stat node)))]))
+
+(define (perms node)
+  (cond [(shill-dir? node) (stat-perms ((shill-dir-stat node)))]
+	[(shill-file? node) (stat-perms ((shill-file-stat node)))]))
 
 (define (close node)
   (cond [(shill-dir? node)

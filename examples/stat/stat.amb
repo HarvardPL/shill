@@ -1,0 +1,6 @@
+#lang shill/ambient
+
+require "stat.cap";
+
+val test = open-dir("test");
+find-writeable(test,stdout);

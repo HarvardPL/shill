@@ -1,0 +1,24 @@
+#lang shill/cap
+
+provide { find-writeable : 
+	   { d : dir/c(+path, +contents, +stat, +read, +lookup),
+             out : writeable/c }
+	   -> any };
+
+require shill/contracts shill/filesys shill/io "../find-exec/find-exec.cap";
+
+val report = fun(out) {
+  fun (f) {
+    fwrite(out,
+	   "File: ~a~nSize: ~a~nAccessed: ~a~nModified: ~a~nCreated: ~a~n",
+	   path(f), size(f), accessed(f), modified(f), created(f));
+    fwrite(out, "Permissions: ~o~n", perms(f));
+    fwrite(out, "Contents: ~a~n~n", read(f));
+  }
+};
+
+val world-writeable? = fun (f) { bitwise-and(perms(f),2) == 2 };
+
+val find-writeable = fun (dir,out) {
+    find(dir,world-writeable?,report(out));
+};

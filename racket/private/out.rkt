@@ -48,4 +48,14 @@
          cwd
          stdin
          stdout
-         stderr)
+         stderr
+	 size
+	 accessed
+	 modified
+	 created
+	 status-changed
+	 uid
+	 gid
+	 suid
+	 sgid
+	 perms)

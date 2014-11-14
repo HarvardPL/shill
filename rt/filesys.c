@@ -454,6 +454,11 @@ int shill_stat(int fd, struct shillstat *ssp) {
   ssp->change_nsec = sb.st_ctim.tv_nsec;
   ssp->create_sec = sb.st_birthtim.tv_sec;
   ssp->create_nsec = sb.st_birthtim.tv_nsec;
+  ssp->uid = sb.st_uid;
+  ssp->gid = sb.st_gid;
+  ssp->perms = sb.st_mode & (S_IRWXU | S_IRWXG | S_IRWXO);
+  ssp->suid = sb.st_mode & S_ISUID;
+  ssp->sgid = sb.st_mode & S_ISGID;
 
   return 0;
 }
