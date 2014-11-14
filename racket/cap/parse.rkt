@@ -31,8 +31,8 @@
   operator-tokens
   
   (;;; boolean operators
-   AND   ; "and" or "\\/" ∧ 
-   OR    ; "or" or "//\" ∨
+   AND   ; "and" or "//\" ∧ 
+   OR    ; "or" or "\\/" ∨
    NOT   ; "not" or ¬ 
    
    ;;; arithmetic binary operators
@@ -179,8 +179,8 @@
   [less-equal (:or "=>" #\≤)]
   [greater-equal (:or "<=" #\≥)]
   [boolean (:or "true" "false")]
-  [boolean-and (:or "and" "\\/" #\∧)]
-  [boolean-or (:or "or" "/\\" #\∨)]
+  [boolean-and (:or "and" "/\\" #\∧)]
+  [boolean-or (:or "or" "\\/" #\∨)]
   [boolean-not (:or "not" #\¬)]
   [arrow-contract (:or "->" #\→)]
   [dependent-contract (:or "<-" #\←)]
