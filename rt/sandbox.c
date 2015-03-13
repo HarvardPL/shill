@@ -76,6 +76,28 @@ int shill_grant_pipefactory(struct shill_cap *cap) {
   return mac_syscall("shill", 2, &caps);
 }
 
+static int shill_logpaths_num = -1;
+
+int shill_logpaths() {
+  int modid;
+  struct module_stat stat;
+
+  if (shill_logpaths_num == -1) {
+	stat.version = sizeof(stat);
+	modid = modfind("sys/shill_logpaths");
+	if (modid == -1) {
+	  errno = ENOSYS;
+	  return -1;
+	}
+	if (modstat(modid, &stat) == -1) {
+	  return -1;
+	}
+	shill_logpaths_num = stat.data.intval;
+  }
+  
+  return syscall(shill_logpaths_num);
+}
+
 int shill_init() {
   int err;
   mac_t init;
@@ -91,6 +113,7 @@ int shill_enter() {
   if (0 != (err = mac_from_text(&start, "shill/start")))
     return err;
 
+  shill_logpaths();
   return mac_set_proc(start);
 }
 
@@ -100,6 +123,7 @@ int shill_debug() {
   if (0 != (err = mac_from_text(&start, "shill/debug")))
     return err;
 
+  shill_logpaths();
   return mac_set_proc(start);
 }
 
