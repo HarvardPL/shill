@@ -1,0 +1,11 @@
+#lang shill/cap
+
+provide {main : {d : dir/c(+contents), o : file/c(+append)} -> any};
+
+require shill/io;
+
+val main = fun(dir,out) {
+  for f in contents(dir) do {
+    fwrite(out,"~a~n",f);
+  }
+}

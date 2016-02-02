@@ -1,0 +1,6 @@
+#lang shill/ambient
+
+require "Bad01.cap";
+
+val dir = open-file(".");
+main(dir,stdout);
