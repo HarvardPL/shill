@@ -1,8 +1,8 @@
 #lang racket
 
-(require shill/private/utils
-         shill/private/filesystem
-         shill/private/net)
+(require "utils.rkt"
+         "filesystem.rkt"
+         "net.rkt")
 
 (provide forall/c
          cap?

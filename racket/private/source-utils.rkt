@@ -10,7 +10,7 @@
          shill-for
          (contract-out [++ ++/c]))
 
-(require (for-syntax syntax/parse syntax/id-table syntax/modresolve racket/require-transform shill/cap/parse unstable/syntax)) 
+(require (for-syntax syntax/parse syntax/id-table syntax/modresolve racket/require-transform "../cap/parse.rkt"))
 ;; switch-on/off contracts 
 (define-for-syntax WITH-CONTRACTS #t)
 
@@ -48,7 +48,7 @@
                        (module->language-info src-mod-path)])
                  (cond [(member src-mod-path seen)
                         seen]
-                       [(and (equal? mod-info '#(shill/private/language-info get-language-info #f))
+                       [(and (equal? mod-info '#("../private/language-info.rkt" get-language-info #f))
                              (with-handlers ([exn:fail:syntax?
                                               (λ (e) 
                                                  (error 

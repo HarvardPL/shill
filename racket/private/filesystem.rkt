@@ -49,9 +49,9 @@
 
 (require (only-in racket/base [append list-append])
          racket/contract
-         shill/private/net
-         shill/private/utils
-         (rename-in shill/private/ffi 
+         "net.rkt"
+         "utils.rkt"
+         (rename-in "ffi.rkt"
                     [open-dir rt:open-dir]
                     [open-file rt:open-file]
                     [open-for-exec rt:open-for-exec]

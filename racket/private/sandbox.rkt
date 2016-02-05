@@ -15,7 +15,7 @@
 
 
 (require (rename-in ffi/unsafe [-> ffi:->])
-         shill/private/ffi)
+         "ffi.rkt")
 
 (module+ test
   (require rackunit))

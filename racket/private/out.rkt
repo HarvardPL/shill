@@ -1,7 +1,7 @@
 #lang racket
 
-(require shill/private/filesystem
-         shill/private/net)
+(require "filesystem.rkt"
+         "net.rkt")
 
 ;from filesystem
 (provide 

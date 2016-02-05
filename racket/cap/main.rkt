@@ -1,6 +1,6 @@
 #lang racket
 
-(require (except-in shill/private/out 
+(require (except-in "../private/out.rkt"
                     open-dir
                      open-file
                      cwd
@@ -8,9 +8,9 @@
                      stdout
                      stderr
                      pipe-factory
-                     socket-factory) 
-         shill/private/contract-utils
-         shill/private/source-utils
+                     socket-factory)
+         "../private/contract-utils.rkt"
+         "../private/source-utils.rkt"
          (except-in (rename-in racket/base [append list-append]) read write) 
          racket/list 
          racket/path 
@@ -18,8 +18,8 @@
          racket/string
          racket/contract/base)
          
-(provide (all-from-out shill/private/out)
-         (except-out (all-from-out shill/private/contract-utils)
+(provide (all-from-out "../private/out.rkt")
+         (except-out (all-from-out "../private/contract-utils.rkt")
                      create-wallet)
          (all-from-out racket/contract/base)
          (all-from-out racket/list)

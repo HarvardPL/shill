@@ -7,7 +7,7 @@ shill/ambient/main
 #:language-info '#(shill/private/language-info get-language-info #f)
 
 
-(require shill/ambient/parse)
+(require "../parse.rkt")
 
 (define (this-read-syntax [src #f] [in (current-input-port)])
     (parse-program src in))

@@ -1,8 +1,8 @@
 #lang racket
 
-(require shill/private/out
-         shill/private/contract-utils
-         shill/private/source-utils)
+(require "../private/out.rkt"
+         "../private/contract-utils.rkt"
+         "../private/source-utils.rkt")
 
 (provide #%app
          #%module-begin 

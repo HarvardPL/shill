@@ -1,6 +1,6 @@
 #lang racket
 
-(require shill/private/utils)
+(require "utils.rkt")
 
 (provide (rename-out [make-socket-factory socket-factory])
          socket-factory?
