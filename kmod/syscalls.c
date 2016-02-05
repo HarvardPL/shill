@@ -53,8 +53,6 @@ static
 int kern_mkopendirat(struct thread *td, int fd,
 		     const char *path, enum uio_seg segflg,
 		     int mode, int flags) {
-	struct proc *p = td->td_proc;
-	struct filedesc *fdp = p->p_fd;
 	struct mount *mp;
 	struct vnode *vp;
 	struct vattr vattr;
@@ -91,7 +89,7 @@ restart:
 	nd.ni_cnd.cn_flags |= WILLBEDIR;
 	if ((error = namei(&nd)) != 0) {
 	  if (indx != -1)
-		fdclose(fdp, fp, indx, td);
+		fdclose(td, fp, indx);
 	  fdrop(fp, td);
 	  return (error);
 	}
@@ -110,7 +108,7 @@ restart:
 			vput(nd.ni_dvp);
 		vrele(vp);
 		if (indx != -1)
-		  fdclose(fdp, fp, indx, td);
+		  fdclose(td, fp, indx);
 		fdrop(fp, td);
 		return (EEXIST);
 	}
@@ -119,7 +117,7 @@ restart:
 		vput(nd.ni_dvp);
 		if ((error = vn_start_write(NULL, &mp, V_XSLEEP | PCATCH)) != 0) {
 		  if (indx != -1)
-			fdclose(fdp, fp, indx, td);
+			fdclose(td, fp, indx);
 		  fdrop(fp, td);
 		  return (error);
 		}
@@ -168,7 +166,7 @@ out:
 	} else {
 	  vput(nd.ni_vp);
 	  if (indx != -1)
-		fdclose(fdp, fp, indx, td);
+		fdclose(td, fp, indx);
 	  td->td_retval[0] = -1;
 	}
 	fdrop(fp, td);
