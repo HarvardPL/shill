@@ -10,7 +10,7 @@
          shill-for
          (contract-out [++ ++/c]))
 
-(require (for-syntax syntax/parse syntax/id-table syntax/modresolve racket/require-transform shill/cap/parse unstable/syntax)) 
+(require (for-syntax syntax/parse syntax/id-table syntax/modresolve racket/require-transform shill/cap/parse)) 
 ;; switch-on/off contracts 
 (define-for-syntax WITH-CONTRACTS #t)
 
