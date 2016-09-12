@@ -42,6 +42,16 @@ int shill_openfile(const char *path) {
   if (-1 == fd)
     fd = open(path, O_WRONLY | O_CREAT | O_CLOEXEC, S_IRUSR | S_IWUSR);
 
+  struct stat sb;
+  if (0 != fstat(fd, &sb)) {
+	return -1;
+  }
+  if (S_ISDIR(sb.st_mode)) {
+    close(fd);
+    errno = ENOENT;
+    return -1;
+  }
+
   return fd;
 }
 
