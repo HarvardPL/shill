@@ -17,16 +17,16 @@ Vagrant.configure("2") do |config|
     pkg install -y racket
     cd /usr/src && rm -Rf *
     fetch https://codeload.github.com/HarvardPL/ShillBSD/zip/release/9.3.0
-    unzip 9.3.0.zip
+    unzip 9.3.0
     mv ShillBSD-release-9.3.0/* .
-    rm -Rf 9.3.0.zip ShillBSD-release-9.3.0
+    rm -Rf 9.3.0 ShillBSD-release-9.3.0
   SHELL
 
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
     cd /home/vagrant/shill/racket && sudo raco link -i -n shill .
     cd /home/vagrant/shill/stdlib && sudo raco link -i -n shill .
     cd /home/vagrant/shill && make && sudo make install
-    sudo echo 'shill_load="YES"' >> /boot/loader.conf
+    sudo sh -c 'echo shill_load="YES" >> /boot/loader.conf'
   SHELL
 
   config.vm.provision :reload
