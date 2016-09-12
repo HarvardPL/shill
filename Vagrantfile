@@ -14,25 +14,19 @@ Vagrant.configure("2") do |config|
   end
 
   config.vm.provision "shell", inline: <<-SHELL
-    fetch -o /tmp/racket-6.6-src-builtpkgs.tgz https://mirror.racket-lang.org/installers/6.6/racket-6.6-src-builtpkgs.tgz
-    cd /tmp
-    tar xvf racket-6.6-src-builtpkgs.tgz
-    cd racket-6.6
-    mkdir build
-    cd build
-    ../src/configure --prefix=/usr/local --enable-shared && make && make install
-    cd /tmp && rm -Rf /tmp/*
+    pkg install -y racket
+    cd /usr/src && rm -Rf *
+    fetch https://codeload.github.com/HarvardPL/ShillBSD/zip/release/9.3.0
+    unzip 9.3.0.zip
+    mv ShillBSD-release-9.3.0/* .
+    rm -Rf 9.3.0.zip ShillBSD-release-9.3.0
   SHELL
 
   config.vm.provision "shell", privileged: false, inline: <<-SHELL
-    cd /home/vagrant/shill/racket && raco link -n shill .
-    cd /home/vagrant/shill/stdlib && raco link -n shill .
-    cd /home/vagrant/shill && make
-  SHELL
-
-  config.vm.provision "shell", inline: <<-SHELL
-    cd /home/vagrant/shill && make install
-    echo 'shill_load="YES"' >> /boot/loader.conf
+    cd /home/vagrant/shill/racket && sudo raco link -i -n shill .
+    cd /home/vagrant/shill/stdlib && sudo raco link -i -n shill .
+    cd /home/vagrant/shill && make && sudo make install
+    sudo echo 'shill_load="YES"' >> /boot/loader.conf
   SHELL
 
   config.vm.provision :reload
