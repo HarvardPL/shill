@@ -43,7 +43,8 @@
                (let* ([src-mod (import-src-mod-path id)]
                       [src-mod-path (resolve-module-path (cond [(module-path? src-mod) src-mod]
                                                                [else (syntax->datum src-mod)])
-                                                          #f #;(syntax-source #'spec))]
+                                                         #f #;(syntax-source #'spec))]
+                      [_ (dynamic-require src-mod-path (void))]
                       [mod-info 
                        (module->language-info src-mod-path)])
                  (cond [(member src-mod-path seen)
