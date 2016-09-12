@@ -2,12 +2,15 @@
 # vi: set ft=ruby :
 
 Vagrant.configure("2") do |config|
-  config.vm.box = "shill/freebsd-9.3"
+  config.vm.box = if ENV.has_key?("SHILL_GUI")
+                  then "shill/freebsd-9.3-mate"
+                  else "shill/freebsd-9.3"
+                  end
   config.vm.synced_folder ".", "/home/vagrant/shill", type: "rsync"
 
   config.vm.provider "virtualbox" do |vb|
-     vb.gui = false
-     vb.memory = "1024"
+    vb.gui = ENV.has_key?("SHILL_GUI")
+    vb.memory = "1024"
   end
 
   config.vm.provision "shell", inline: <<-SHELL

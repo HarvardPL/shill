@@ -5,7 +5,8 @@
          shill/private/source-utils)
 
 (provide #%app
-         #%module-begin 
+         #%module-begin
+	 #%top-interaction
          #%datum 
          lambda
          let
