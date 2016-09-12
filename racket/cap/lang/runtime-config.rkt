@@ -49,9 +49,32 @@
      (lambda (form)
        (when first?
          (old-eval
+          '(#%require (only shill/private/out
+                            open-dir
+                            open-file
+                            cwd
+                            stdin
+                            pipe-factory
+                            socket-factory
+                            create-pipe
+                            file?
+                            dir?
+                            pipe-factory?
+                            socket-factory?
+                            pipe-end?)))
+         (old-eval
           '(#%require (only shill/private/repl
                             stdout
                             stderr)))
+         (old-eval
+          '(#%require (only shill/private/contract-utils
+                            create-wallet
+                            put
+                            get)))
+         (old-eval
+          '(#%require (only shill/private/source-utils
+                            var
+                            set-var)))
          (set! first? #f))
        (old-eval form)))
     (current-read-interaction

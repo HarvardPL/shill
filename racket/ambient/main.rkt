@@ -30,11 +30,11 @@
          pipe-end?
          #%top
          val
+         var
+         set-var
          define-values
          list
          empty
          create-wallet
          put
          get)
-
-

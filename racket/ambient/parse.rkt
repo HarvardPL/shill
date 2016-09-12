@@ -74,6 +74,7 @@
   
    ;;; definitions
    VAL    ; val
+   VAR    ; var
    VALS   ; vals
    
    ;;; list abbreviations
@@ -162,6 +163,7 @@
    
    ;; definitions
    ["val" (token-VAL (string->symbol lexeme))]
+   ["var" (token-VAR (string->symbol lexeme))]
    ["vals" (token-VALS (string->symbol lexeme))]
    ["=" (string->symbol lexeme)]
    
@@ -198,7 +200,7 @@
     (syn-val lexeme 'symbol #f start-pos end-pos)]
    [boolean
     (syn-val lexeme 'constant #f start-pos end-pos)]
-   [(:or "val" "vals")
+   [(:or "val" "vals" "var")
     (syn-val lexeme 'keyword #f start-pos end-pos)]
    ["|"
     (syn-val lexeme 'symbol #f start-pos end-pos)]
@@ -409,20 +411,24 @@
                [(pre-ids = expr SEQ) 
                 (b o `(,(b o `define-values 1 1) ,(b o $1 1 1) ,$3) 1 4)]
                [(IDENTIFIER = expr SEQ) 
-                (b o `(,(b o `val 1 1) ,(borg o $1 1 1) ,$3) 1 4)]
+                (b o `(,(b o `set-var 1 1) ,(borg o $1 1 1) ,$3) 1 4)]
                [(VALS pre-ids = expr SEQ)
                 (b o `(,(b o `define-values 1 1) ,(b o $2 2 2) ,$4) 1 5)]
                [(VAL IDENTIFIER = expr SEQ) 
-                (b o `(,(b o `val 1 1) ,(borg o $2 2 2) ,$4) 1 5)])
+                (b o `(,(b o `val 1 1) ,(borg o $2 2 2) ,$4) 1 5)]
+               [(VAR IDENTIFIER = expr SEQ) 
+                (b o `(,(b o `var 1 1) ,(borg o $2 2 2) ,$4) 1 5)])
     (final-statement [(expr) $1]
                      [(pre-ids = expr)
                       (b o `(,(b o `define-values 1 1) ,(b o $1 1 1) ,$3) 1 3)]
                      [(IDENTIFIER = expr)
-                      (b o `(,(b o `val 1 1) ,(borg o $1 1 1) ,$3) 1 3)]
+                      (b o `(,(b o `set-var 1 1) ,(borg o $1 1 1) ,$3) 1 3)]
                      [(VALS pre-ids = expr) 
                       (b o `(,(b o `define-values 1 1) ,(b o $2 2 2) ,$4) 1 4)]
                      [(VAL IDENTIFIER = expr)
-                      (b o `(,(b o `val 1 1) ,(borg o $2 1 1) ,$4) 1 4)])
+                      (b o `(,(b o `val 1 1) ,(borg o $2 1 1) ,$4) 1 4)]
+                     [(VAR IDENTIFIER = expr) 
+                      (b o `(,(b o `var 1 1) ,(borg o $2 1 1) ,$4) 1 4)])
     (pre-list  [(expr) `(,$1)]
                [(expr COMMA pre-list) `(,$1 ,@$3)])
     (operation [(expr PP expr)  

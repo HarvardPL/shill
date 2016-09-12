@@ -49,7 +49,7 @@
                        (module->language-info src-mod-path)])
                  (cond [(member src-mod-path seen)
                         seen]
-                       [(and (equal? mod-info '#(shill/private/language-info get-language-info #f))
+                       [(and (equal? mod-info '#(shill/cap/language-info get-language-info #f))
                              (with-handlers ([exn:fail:syntax?
                                               (λ (e) 
                                                  (error 
@@ -81,8 +81,9 @@
 (define-syntax (var stx)
   (syntax-case stx ()
     [(_ id v)
-     (begin (free-id-table-set! setable-identifiers #'id #t)
-            #'(define id v))]))
+     (begin0
+       #'(define id v)
+       (free-id-table-set! setable-identifiers #'id #t))]))
 
 (define-for-syntax (allign init updates)
   (define (get-updated id l)

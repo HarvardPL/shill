@@ -7,5 +7,5 @@
   (lambda (key default)
     (case key
       [(configure-runtime)
-       '(#(racket/runtime-config configure #f))]
+       '(#(shill/cap/lang/runtime-config configure #f))]
       [else default])))
