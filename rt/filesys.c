@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include "filesys.h"
 #include "syscalls.h"
@@ -41,6 +42,16 @@ int shill_openfile(const char *path) {
 
   if (-1 == fd)
     fd = open(path, O_WRONLY | O_CREAT | O_CLOEXEC, S_IRUSR | S_IWUSR);
+
+  struct stat sb;
+  if (0 != fstat(fd, &sb)) {
+	return -1;
+  }
+  if (S_ISDIR(sb.st_mode)) {
+    close(fd);
+    errno = ENOENT;
+    return -1;
+  }
 
   return fd;
 }
@@ -436,7 +447,12 @@ int shill_writepipe(int fd, char *buf, size_t len) {
 }
 
 int shill_readpipe(int fd, char *buf, size_t len) {
-  return read(fd, buf, len);
+  int ret = 0;
+  if (poll(&(struct pollfd){ .fd = fd, .events = POLLIN }, 1, 0) == 1)
+    ret = read(fd, buf, len);
+  if (ret == -1 && errno == EAGAIN)
+    ret = 0;
+  return ret;
 }
 
 int shill_stat(int fd, struct shillstat *ssp) {
