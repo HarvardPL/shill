@@ -30,6 +30,8 @@
 (define-syntax-rule (shill-require spec ...) (require (check-if-shill spec) ...))
 
 
+(define-for-syntax trust-require (make-parameter #f))
+
 (define-syntax check-if-shill
   (make-require-transformer
    (lambda (stx)
@@ -49,14 +51,15 @@
                        (module->language-info src-mod-path)])
                  (cond [(member src-mod-path seen)
                         seen]
-                       [(and (equal? mod-info '#(shill/private/language-info get-language-info #f))
-                             (with-handlers ([exn:fail:syntax?
-                                              (λ (e) 
-                                                 (error 
-                                                  'non-shill-module-required 
-                                                  "~a not a shill/cap module"
-                                                  src-mod-path))])
-                               (parse-program #f (open-input-file src-mod-path))))
+                       [(and (equal? mod-info '#(shill/cap/language-info get-language-info #f))
+                             (or (getenv "SHILL_TRUST_REQUIRE")
+                                 (with-handlers ([exn:fail:syntax?
+                                                  (λ (e) 
+                                                    (error 
+                                                     'non-shill-module-required 
+                                                     "~a not a shill/cap module"
+                                                     src-mod-path))])
+                                   (parse-program #f (open-input-file src-mod-path)))))
                         (cons src-mod-path seen)]
                        [else (error 
                               'non-shill-module-required 
@@ -81,8 +84,9 @@
 (define-syntax (var stx)
   (syntax-case stx ()
     [(_ id v)
-     (begin (free-id-table-set! setable-identifiers #'id #t)
-            #'(define id v))]))
+     (begin0
+       #'(define id v)
+       (free-id-table-set! setable-identifiers #'id #t))]))
 
 (define-for-syntax (allign init updates)
   (define (get-updated id l)

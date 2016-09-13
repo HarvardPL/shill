@@ -4,7 +4,7 @@ shill/cap/main
 #:read-syntax this-read-syntax
 #:whole-body-readers? #t
 #:info get-info
-#:language-info '#(shill/private/language-info get-language-info #f)
+#:language-info '#(shill/cap/language-info get-language-info #f)
 
 (require shill/cap/parse)
 
