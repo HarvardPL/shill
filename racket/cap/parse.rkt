@@ -268,10 +268,12 @@
    "+permissions"]
   [permission-item
    (:or  "+poll"
-         "+bin"
+         "+bind"
          "+connect"
          "+listen"
-         "+accept")])
+         "+accept"
+         "+send"
+         "+recv")])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -848,9 +850,9 @@
     (dir-privilege-modifier [(OC dir-privileges CC) $2])
     (pipe-factory-privilege-modifier [(OC pipe-end-privileges CC) $2])
     (permission-list [(PERMISSION-ITEM) 
-                      `(,(b o (string->symbol $1) 1 1))]
+                      `(',(b o (string->symbol $1) 1 1))]
                      [(PERMISSION-ITEM COMMA permission-list)
-                      `(,(b o (string->symbol $1) 1 1) ,@$3)]) 
+                      `(',(b o (string->symbol $1) 1 1) ,@$3)]) 
     (top-fs-common-privilege [(SIMPLE-FS-COMMON-PRIVILEGE) 
                               `(,(b o  (key->keyword $1) 1 1) 
                                 ,(b o `(,(b o `list 1 1) ,$1 ,(b o '#t 1 1)) 1 1))]
