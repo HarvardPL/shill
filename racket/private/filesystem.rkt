@@ -145,7 +145,11 @@
   
   (define (add-symlink name target) (rt:add-symlink dir (string->path-element name) (string->path target)))
   
-  (define (read-symlink name) (path->string (rt:read-link dir (string->path-element name))))  
+  (define (read-symlink name)
+    (let ([result (rt:read-link dir (string->path-element name))])
+      (if (path? result)
+          (path->string result)
+          result)))
   
   (define (unlink-file target target-name) 
     (define name (string->path-element target-name))
