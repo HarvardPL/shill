@@ -78,6 +78,9 @@
                      directory-list
                      filesystem-root-list
                      getenv
-                     putenv))
+                     putenv
+                     display
+                     displayln
+                     writeln))
 
 
