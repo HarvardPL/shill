@@ -146,8 +146,10 @@
                                                        new))
                                                    eof))]
                    [current-print (lambda (val)
-                                    (sleep 0.1)
-                                    (kill-thread out-reader)
-                                    (kill-thread err-reader)
+                                    (thread
+                                     (lambda ()
+                                      (sleep 1)
+                                      (kill-thread out-reader)
+                                      (kill-thread err-reader)))
                                     (old-print val))])
-      (thunk))))
+          (thunk))))
