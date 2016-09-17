@@ -6,7 +6,7 @@ require "grep.cap";
 
 # Create a wallet with the necessary capabilities
 # for running the 'grep' executable.
-wallet = create-wallet();
+val wallet = create-wallet();
 populate-native-wallet(wallet,
 	open-dir("/"),
 	"/usr/bin",
