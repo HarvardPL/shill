@@ -21,12 +21,13 @@ provide
   {native-wallet-ext/c :
      +optional {get : wallet-policy/c, put : wallet-policy/c} -> contract?}
   {find-in-path :
-     {path : listof(dir/c(+lookup with { +path, +read, +exec })),
+     {path : listof(dir/c(+lookup with { +path, +read, +exec },
+                          +read-symlink)),
       name : string?,
       exec : boolean?}
      -> or/c(file/c(+path, +read, +exec),false)}
   {populate-native-wallet :
-     forall [X : +lookup] .
+     forall [X : +lookup, +read-symlink] .
        {wallet : wallet-keys/c(gets = [["extras", simple-wallet/c(put = X)]],
                                puts = [["path", X],["lib-path", X],["lookups", X],
                                        ["ldd-tools", X],
@@ -43,10 +44,12 @@ require shill/contracts;
 require shill/filesys;
 
 val native-wallet-get-spec =
-    [["path", dir/c(+lookup with { +path, +read, +exec, +read-symlink})],
-     ["lib-path", dir/c(+lookup with { +path, +read, +exec, +read-symlink})],
+    [["path", dir/c(+lookup with { +path, +read, +exec },
+                    +read-symlink)],
+     ["lib-path", dir/c(+lookup with { +path, +read, +exec },
+                        +read-symlink)],
      ["ldd-tools", file/c(+path, +read, +stat, +exec)],
-     ["lookups", dir/c(+lookup, +stat)],
+     ["lookups", dir/c(+lookup, +stat, +read-symlink)],
      ["extras", simple-wallet/c(get = read-exec-only/c)],
      ["pipe-factory", pipe-factory/c(+first with { +write, +append, +close },
                                      +second with { +read, +stat, +close })]];
@@ -87,7 +90,12 @@ val find-in-path = fun(path-list,name,exec) {
   if empty?(path-list) then error("Could not find " ++ name)
   else {
     val cur = first(path-list);
-    val f = if exec then lookup(cur,name,"exec") else lookup(cur,name);
+    val link = read-symlink(cur,name);
+    val tryname = if path-element-string?(link) then link else name;
+    val f =
+        if exec
+	 then lookup(cur,tryname,"exec")
+	 else lookup(cur,tryname);
     if file?(f) then f
     else
       find-in-path(rest(path-list),name,exec)

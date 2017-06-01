@@ -58,4 +58,6 @@
 	 gid
 	 suid
 	 sgid
-	 perms)
+	 perms
+
+         path-element-string?)

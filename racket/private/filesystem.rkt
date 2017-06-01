@@ -4,6 +4,7 @@
 (provide (rename-out [shill-dir? dir?]
                      [shill-file? file?]
                      [shill-pipe-factory? pipe-factory?])
+         path-element-string?
          cap?
          sys-error?
          pipe-end?
